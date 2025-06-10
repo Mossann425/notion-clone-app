@@ -1,9 +1,7 @@
-'use server';
-
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Note } from '@/lib/types';
+import { Note } from '@/lib/types'; // Note型をインポート
 
 type SaveNoteParams = {
   id?: string;
@@ -11,7 +9,8 @@ type SaveNoteParams = {
   content: string | null;
 };
 
-export async function saveNote({ id, title, content }: SaveNoteParams) {
+// saveNote 関数の戻り値の型を明示的に指定します
+export async function saveNote({ id, title, content }: SaveNoteParams): Promise<{ data: Note | null; error: any }> {
   if (id) {
     const { data, error } = await supabase
       .from('notes')
@@ -25,7 +24,7 @@ export async function saveNote({ id, title, content }: SaveNoteParams) {
     }
     revalidatePath('/notes');
     revalidatePath(`/notes/${id}`);
-    return { data, error: null };
+    return { data: data as Note, error: null }; // dataをNote型にキャスト
   } else {
     const { data, error } = await supabase
       .from('notes')
@@ -37,7 +36,7 @@ export async function saveNote({ id, title, content }: SaveNoteParams) {
       return { data: null, error };
     }
     revalidatePath('/notes');
-    return { data, error: null };
+    return { data: data as Note, error: null }; // dataをNote型にキャスト
   }
 }
 
