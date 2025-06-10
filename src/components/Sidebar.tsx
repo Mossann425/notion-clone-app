@@ -3,17 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-
-interface Folder {
-  id: string;
-  name: string;
-}
-
-interface Note {
-  id: string;
-  title: string | null;
-  folderId: string | null;
-}
+import { Folder, Note } from '@/lib/types'; // FolderとNoteを@/lib/typesからインポート
 
 interface SidebarProps {
   // 現在選択されているメモのIDを受け取るプロパティ（オプション）
@@ -25,7 +15,7 @@ export default function Sidebar({ selectedNoteId }: SidebarProps) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // フォルダの開閉状態を管理 (ここでは簡易的に全て開いた状態)
+  // フォルダの開閉状態を管理
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
   const [newFolderName, setNewFolderName] = useState(''); // 新しいフォルダ名用の状態
   const [isCreatingFolder, setIsCreatingFolder] = useState(false); // フォルダ作成中かどうかの状態
@@ -38,7 +28,7 @@ export default function Sidebar({ selectedNoteId }: SidebarProps) {
         // フォルダの取得
         const { data: foldersData, error: foldersError } = await supabase
           .from('folders')
-          .select('id, name')
+          .select('id, name, created_at')
           .order('name', { ascending: true });
 
         if (foldersError) throw foldersError;
@@ -49,15 +39,15 @@ export default function Sidebar({ selectedNoteId }: SidebarProps) {
         // メモの取得
         const { data: notesData, error: notesError } = await supabase
           .from('notes')
-          .select('id, title, folderId')
+          .select('id, title, folderId, content, created_at, updated_at')
           .order('created_at', { ascending: false });
 
         if (notesError) throw notesError;
         setNotes(notesData || []);
 
-      } catch (err: any) {
+      } catch (err: unknown) { // anyからunknownに変更
         console.error('サイドバーデータの取得エラー:', err);
-        setError(err.message || 'データの取得に失敗しました。');
+        setError(err instanceof Error ? err.message : 'データの取得に失敗しました。');
       } finally {
         setLoading(false);
       }
@@ -99,7 +89,7 @@ export default function Sidebar({ selectedNoteId }: SidebarProps) {
       // フォルダリストを再フェッチしてUIを更新
       const { data: updatedFoldersData, error: updatedFoldersError } = await supabase
         .from('folders')
-        .select('id, name')
+        .select('id, name, created_at')
         .order('name', { ascending: true });
 
       if (updatedFoldersError) throw updatedFoldersError;
@@ -108,9 +98,9 @@ export default function Sidebar({ selectedNoteId }: SidebarProps) {
       setOpenFolders(prev => new Set(prev).add(data[0].id));
 
 
-    } catch (err: any) {
+    } catch (err: unknown) { // anyからunknownに変更
       console.error('フォルダ作成エラー:', err);
-      setError(err.message || 'フォルダの作成に失敗しました。');
+      setError(err instanceof Error ? err.message : 'フォルダの作成に失敗しました。');
     } finally {
       setIsCreatingFolder(false);
     }
@@ -205,11 +195,6 @@ export default function Sidebar({ selectedNoteId }: SidebarProps) {
             </div>
           ))}
         </div>
-      )}
-
-      {/* フォルダもメモもない場合の表示 */}
-      {folders.length === 0 && notesWithoutFolder.length === 0 && (
-        <p className="text-gray-500 text-sm">まだフォルダもメモもありません。</p>
       )}
     </div>
   );
