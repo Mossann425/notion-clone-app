@@ -1,131 +1,85 @@
-// src/components/NoteEditor.tsx
-'use client'; // クライアントコンポーネントであることを宣言
+import { useState } from 'react'; // useEffectは削除されました
+import { useRouter } from 'next/navigation';
+import { Note } from '@/lib/types'; // Note型をインポート
+import { saveNote, deleteNote } from '@/app/notes/actions';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
-// import { useRouter } from 'next/navigation'; // Server Actionがリダイレクトを処理するため、このインポートは不要になりました
+type Props = {
+  initialNote?: Note;
+  onNoteSaved: (note: Note) => void;
+  onNoteDeleted?: () => void; // この行がオプションになっていることを確認してください
+};
 
-interface NoteEditorProps {
-  initialNote?: {
-    id?: string;
-    title: string | null;
-    content: string | null;
-  };
-  onNoteSaved?: () => void;
-  onNoteDeleted?: () => void; // onNoteDeleted プロパティの型定義を追加
-}
-
-export default function NoteEditor({ initialNote, onNoteSaved, onNoteDeleted }: NoteEditorProps) {
+export default function NoteEditor({ initialNote, onNoteSaved, onNoteDeleted }: Props) {
   const [title, setTitle] = useState(initialNote?.title || '');
   const [content, setContent] = useState(initialNote?.content || '');
   const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [saveStatus, setSaveStatus] = useState('');
-  const noteId = useRef(initialNote?.id);
-  // const router = useRouter(); // useRouterフックはServer Actionがリダイレクトを処理するため不要になりました
+  const router = useRouter();
 
   const handleSave = async () => {
     setIsSaving(true);
-    setSaveStatus('保存中...');
+    const id = initialNote?.id;
+    const { data, error } = await saveNote({ id, title, content });
 
-    try {
-      if (noteId.current) {
-        // 既存のメモを更新
-        const { data, error } = await supabase
-          .from('notes')
-          .update({ title, content, updated_at: new Date().toISOString() })
-          .eq('id', noteId.current)
-          .select();
-
-        if (error) throw error;
-        console.log('メモを更新しました:', data);
-        setSaveStatus('保存されました！');
-      } else {
-        // 新しいメモを作成
-        const { data, error } = await supabase
-          .from('notes')
-          .insert([{ title, content }])
-          .select();
-
-        if (error) throw error;
-        noteId.current = data[0].id;
-        console.log('新しいメモを作成しました:', data);
-        setSaveStatus('保存されました！');
+    if (error) {
+      console.error('Error saving note:', error.message);
+    } else if (data) {
+      onNoteSaved(data); // dataはNote型として渡されます
+      if (!initialNote?.id) {
+        router.push(`/notes/${data.id}`);
       }
-      onNoteSaved?.();
-    } catch (error: any) { // error の型を any にして、プロパティにアクセスしやすくする
-      console.error('保存エラー:', error, error.message, error.details, error.hint, error.code);
-      setSaveStatus('保存に失敗しました。');
-    } finally {
-      setIsSaving(false);
     }
+    setIsSaving(false);
   };
 
   const handleDelete = async () => {
-    if (!noteId.current || !window.confirm('本当にこのメモを削除しますか？')) {
-      return; // IDがない場合、またはユーザーがキャンセルした場合は処理を中止
-    }
+    if (!initialNote?.id) return;
 
-    setIsDeleting(true);
-    setSaveStatus('削除中...');
-
-    try {
-      const { error } = await supabase
-        .from('notes')
-        .delete()
-        .eq('id', noteId.current);
-
-      if (error) throw error;
-
-      console.log('メモを削除しました:', noteId.current);
-      setSaveStatus('メモが削除されました。');
-      onNoteDeleted?.(); // 削除成功後に onNoteDeleted コールバックを呼び出す (Server Actionをトリガー)
-      // router.push('/notes'); // この行はServer Actionが処理するため不要になりました
-    } catch (error: any) { // error の型を any にして、プロパティにアクセスしやすくする
-      console.error('削除エラー:', error, error.message, error.details, error.hint, error.code);
-      setSaveStatus('削除に失敗しました。');
-    } finally {
-      setIsDeleting(false);
+    if (window.confirm('このメモを削除してもよろしいですか？')) {
+      const { error } = await deleteNote(initialNote.id);
+      if (error) {
+        console.error('Error deleting note:', error.message);
+      } else {
+        // onNoteDeleted が存在する場合のみ呼び出す
+        if (onNoteDeleted) {
+          onNoteDeleted();
+        } else {
+          router.push('/notes');
+        }
+      }
     }
   };
 
   return (
-    <div className="p-4 bg-white shadow-md rounded-lg">
+    <div className="flex flex-col h-full p-4">
       <input
         type="text"
-        className="w-full text-3xl font-bold mb-4 p-2 border-b-2 border-gray-200 focus:outline-none"
         placeholder="タイトル"
+        className="w-full p-2 mb-4 text-xl font-bold bg-transparent border-b border-gray-700 focus:outline-none"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
       />
       <textarea
-        className="w-full h-64 text-lg p-2 border-none focus:outline-none resize-none"
-        placeholder="メモの内容をここに記述..."
+        placeholder="メモの内容"
+        className="flex-grow w-full p-2 bg-transparent focus:outline-none"
         value={content}
         onChange={(e) => setContent(e.target.value)}
       />
-      <div className="flex justify-between items-center mt-4">
-        <div className="flex space-x-2">
+      <div className="flex justify-end mt-4 space-x-2">
+        <button
+          onClick={handleSave}
+          className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
+          disabled={isSaving}
+        >
+          {isSaving ? '保存中...' : '保存'}
+        </button>
+        {initialNote && (
           <button
-            onClick={handleSave}
-            disabled={isSaving || isDeleting}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+            onClick={handleDelete}
+            className="px-4 py-2 text-white bg-red-600 rounded hover:bg-red-700"
           >
-            {isSaving ? '保存中...' : '保存'}
+            削除
           </button>
-          {initialNote?.id && ( // 既存のメモの場合のみ削除ボタンを表示
-            <button
-              onClick={handleDelete}
-              disabled={isDeleting || isSaving}
-              className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
-            >
-              {isDeleting ? '削除中...' : '削除'}
-            </button>
-          )}
-        </div>
-        <div className="text-gray-500 text-sm">
-          {saveStatus}
-        </div>
+        )}
       </div>
     </div>
   );

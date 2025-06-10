@@ -1,17 +1,16 @@
 // src/app/notes/page.tsx
-// ... existing code ...
 import { supabase } from '@/lib/supabase';
 import NoteEditor from '@/components/NoteEditor';
 import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
-import { redirect } from 'next/navigation'; // 変更点1: redirectをインポート
+import { redirect } from 'next/navigation';
 
 export default async function NotesPage() {
   async function handleNoteSaved() {
     'use server';
     revalidatePath('/notes'); // メモ一覧ページを再検証
-    redirect('/notes'); // 変更点2: 保存後、メモ一覧ページへリダイレクト
+    redirect('/notes'); // 保存後、メモ一覧ページへリダイレクト
   }
 
   const { data: notes, error } = await supabase.from('notes').select('*');
@@ -26,7 +25,7 @@ export default async function NotesPage() {
       <h1 className="text-2xl font-bold mb-4">メモ一覧</h1>
 
       {/* 新しいメモを作成するためのNoteEditorコンポーネントを追加 */}
-      <div className="mb-8"> {/* 余白のためのdiv */}
+      <div className="mb-8">
         <h2 className="text-xl font-semibold mb-2">新しいメモを作成</h2>
         {/* onNoteSaved プロパティとしてServer Actionを渡す */}
         <NoteEditor onNoteSaved={handleNoteSaved} />
