@@ -114,6 +114,7 @@
 2.  ブラウザで `http://localhost:3000/notes` にアクセスします。
 
 ## ファイル構造 (File Structure)
+ ```
 notion-clone/
 ├── public/ # 静的ファイル (画像など)
 ├── src/
@@ -140,4 +141,5 @@ notion-clone/
 ├── README.md # このファイル
 ├── tailwind.config.js # Tailwind CSS の設定 (@tailwindcss/typography プラグインを含む)
 └── tsconfig.json # TypeScript の設定
-更新が完了したら、教えてください。
+ ```
+
