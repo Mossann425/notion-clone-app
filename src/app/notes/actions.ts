@@ -1,7 +1,10 @@
+'use server';
+
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Note } from '@/lib/types'; // Note型をインポート
+import { Note } from '@/lib/types';
+import { PostgrestError } from '@supabase/supabase-js'; // この行を追加
 
 type SaveNoteParams = {
   id?: string;
@@ -10,7 +13,7 @@ type SaveNoteParams = {
 };
 
 // saveNote 関数の戻り値の型を明示的に指定します
-export async function saveNote({ id, title, content }: SaveNoteParams): Promise<{ data: Note | null; error: any }> {
+export async function saveNote({ id, title, content }: SaveNoteParams): Promise<{ data: Note | null; error: PostgrestError | null }> {
   if (id) {
     const { data, error } = await supabase
       .from('notes')
@@ -40,7 +43,7 @@ export async function saveNote({ id, title, content }: SaveNoteParams): Promise<
   }
 }
 
-export async function deleteNote(id: string) {
+export async function deleteNote(id: string): Promise<{ error: PostgrestError | null }> { // 戻り値の型を追加
   const { error } = await supabase.from('notes').delete().eq('id', id);
 
   if (error) {
@@ -49,4 +52,6 @@ export async function deleteNote(id: string) {
   revalidatePath('/notes');
   revalidatePath(`/notes/${id}`);
   redirect('/notes');
+  // redirectが実行された場合、この行は unreachable ですが、型のために含めます
+  return { error: null };
 }
