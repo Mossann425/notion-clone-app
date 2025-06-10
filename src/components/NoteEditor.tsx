@@ -1,3 +1,4 @@
+'use client';
 import { useState } from 'react'; // useEffectは削除されました
 import { useRouter } from 'next/navigation';
 import { Note } from '@/lib/types'; // Note型をインポート
