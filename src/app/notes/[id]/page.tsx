@@ -12,8 +12,7 @@ interface NoteDetailPageProps {
 }
 
 export default async function NoteDetailPage({ params }: NoteDetailPageProps) {
-  const { id } = params;
-
+  const { id } = await params;
   const { data: note, error } = await supabase
     .from('notes')
     .select('*')
